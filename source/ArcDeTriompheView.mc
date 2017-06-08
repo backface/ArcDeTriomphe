@@ -17,7 +17,7 @@ class ArcDeTriompheView extends Ui.WatchFace
     var showTime = false;
     var showSteps = true;
     var showMemory = true;    
-    var showHRHistory = true;
+    var showHRHistory = false;
 
     var font;
     var screenShape;  

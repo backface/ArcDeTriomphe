@@ -3,6 +3,9 @@ using Toybox.Time as Time;
 using Toybox.Time.Gregorian as Calendar;
 
 /*
+derived from always late!
+https://github.com/myneur/late
+
 code by https://gist.github.com/Tafkas
 Derived from its javascript implementation
 
