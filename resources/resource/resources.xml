@@ -1,0 +1,5 @@
+<resources>
+    <fonts>
+        <font id="id_font_tstar" filename="fonts/tstar.fnt" />
+    </fonts>
+</resources>
