@@ -17,9 +17,8 @@ class ArcDeTriompheView extends Ui.WatchFace
     var showTime = false;
     var showSteps = true;
     var showMemory = true;    
-    var showHRHistory = false;
+    var showHRHistory = true;
 
-    var font;
     var screenShape;  
     var utcOffset;
     var width;
@@ -35,11 +34,11 @@ class ArcDeTriompheView extends Ui.WatchFace
     
     function initialize() {
         WatchFace.initialize();
-        screenShape = Sys.getDeviceSettings().screenShape;
+        
     }
 
     function onLayout(dc) {
-        font = Ui.loadResource(Rez.Fonts.id_font_tstar);
+        screenShape = Sys.getDeviceSettings().screenShape;
     }
 
     function onUpdate(dc) {
@@ -48,7 +47,6 @@ class ArcDeTriompheView extends Ui.WatchFace
         var hourHand;
         var minuteHand;
         var secondHand;
-        var secondTail;
         
         var max_dim, min_dim;
         var steps_norm;
@@ -80,13 +78,13 @@ class ArcDeTriompheView extends Ui.WatchFace
 		}
 		
 		if (steps_norm >= 1) {
-			steps_color = 0x00ff00;
+			steps_color = Gfx.COLOR_LT_GRAY;
 			steps_norm = 1;
 		} else {
 			steps_color = Gfx.COLOR_LT_GRAY;
 		}
 		
-		if (mem < 0.15) {
+		if (mem > 0.85) {
 			mem_color = 0xff0000;
 		} else {
 			mem_color = Gfx.COLOR_LT_GRAY;
@@ -104,7 +102,7 @@ class ArcDeTriompheView extends Ui.WatchFace
 			// memory	
 			if (showMemory) {		       		
 				dc.setColor(mem_color, Gfx.COLOR_TRANSPARENT);   
-				dc.fillRectangle(width - width * mem, 4, width, 3);  
+				dc.fillRectangle(width * mem, 4, width, 3);  
 			}
 			
 			// steps
@@ -303,18 +301,6 @@ class ArcDeTriompheView extends Ui.WatchFace
         offset=new Time.Duration(utcOffset).value()/3600;
         sunrise += offset;
         sunset += offset;
-             		
-        /*
-        Sys.println( "position: " + lonW + "/" + latN);
-        Sys.println( "timeZoneOffset: " + clockTime.timeZoneOffset);
-        Sys.println( "offset: " + offset);
-        Sys.println( "Sunrise: " + (sunrise.toNumber() % 24) + ":" + (sunrise - sunrise.toNumber() ) * 60 );
-        Sys.println( "Sunset: " + (sunset.toNumber() % 24) + ":" + (sunset - sunset.toNumber() ) * 60 );
-        Sys.println( "Sunrise + offset: " + (sunrise.toNumber() % 24) + ":" + ((sunrise - sunrise.toNumber() ) * 60).format("%.2d") );
-        Sys.println( "Sunset + offset " + (sunset.toNumber() % 24) + ":" + ((sunset - sunset.toNumber() ) * 60).format("%.2d") );
-		*/
-	
-
    }    
 
 }
