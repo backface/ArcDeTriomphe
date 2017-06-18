@@ -7,16 +7,20 @@ using Toybox.Time as Time;
 using Toybox.Time.Gregorian as Calendar;
 using Toybox.WatchUi as Ui;
 using Toybox.SensorHistory as Sensor;
+using Toybox.Application as App;
+
 
 class ArcDeTriompheView extends Ui.WatchFace
 {
+	
     var isAwake;
     var showSunrise = true;
     var showSunriseTimes = false;
     var showDate = false;
     var showTime = false;
-    var showSteps = true;
-    var showMemory = true;    
+    var showBatteryBar = true;
+    var showStepsBar = true;
+    var showMemoryBar = true;    
     var showHRHistory = true;
 
     var screenShape;  
@@ -28,13 +32,21 @@ class ArcDeTriompheView extends Ui.WatchFace
     var offset; 
     var clockTime;
     var day = -1;
+    var location;
     var lonW;
 	var latN;
+	var hasNewLocation = false;
     
     
     function initialize() {
         WatchFace.initialize();
-        
+		var app = App.getApp();
+		
+		latN = app.getProperty("latN");
+		lonW = app.getProperty("lonW");
+		if (location != null) {
+			hasNewLocation = true;
+		}
     }
 
     function onLayout(dc) {
@@ -48,94 +60,69 @@ class ArcDeTriompheView extends Ui.WatchFace
         var minuteHand;
         var secondHand;
         
-        var max_dim, min_dim;
-        var steps_norm;
-        var battery_color;
-        var steps_color;
-        var mem_color;
         
-		width = dc.getWidth();
-        height = dc.getHeight();
-        
-        if (width > height) {
-			max_dim = width; 
-			min_dim = height;
-		} else {
-			max_dim = height; 
-			min_dim = width;
-		}
-		
-		var mem = Sys.getSystemStats().usedMemory * 1.0 / Sys.getSystemStats().totalMemory;
-		var battery = Sys.getSystemStats().battery;
-		steps_norm = (Act.getInfo().steps * 1.0 / Act.getInfo().stepGoal);
-						
-		if (battery < 15) {
-			battery_color = 0xFF0000;
-		} else if (battery <= 30) {
-			battery_color = 0xFF6666;
-		} else {
-			battery_color = Gfx.COLOR_LT_GRAY;
-		}
-		
-		if (steps_norm >= 1) {
-			steps_color = Gfx.COLOR_LT_GRAY;
-			steps_norm = 1;
-		} else {
-			steps_color = Gfx.COLOR_LT_GRAY;
-		}
-		
-		if (mem > 0.85) {
-			mem_color = 0xff0000;
-		} else {
-			mem_color = Gfx.COLOR_LT_GRAY;
-		}
+		var width = dc.getWidth();
+        var height = dc.getHeight();
+        var min_dim = min(width,height);
+        var max_dim = max(width,height);
+
 
         // Clear the screen
         dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_WHITE);
         dc.fillRectangle(0, 0, dc.getWidth(), dc.getHeight());
+        
 
-        if (screenShape == Sys.SCREEN_SHAPE_RECTANGLE) {		
-			// Battery		
-			dc.setColor(battery_color, Gfx.COLOR_TRANSPARENT);        		
-			dc.fillRectangle(0, 0, width * battery/100, 3);        			
-			
-			// memory	
-			if (showMemory) {		       		
-				dc.setColor(mem_color, Gfx.COLOR_TRANSPARENT);   
-				dc.fillRectangle(width * mem, 4, width, 3);  
-			}
-			
-			// steps
-			if (showSteps) {
-				dc.setColor(steps_color, Gfx.COLOR_TRANSPARENT);  
-				dc.fillRectangle(0, height-3, width * steps_norm, 3); 
-			}
-		} else {
-			// Battery		
-			dc.setColor(battery_color, Gfx.COLOR_TRANSPARENT);        		
-			dc.setPenWidth(3);
-			dc.drawArc(width/2, height/2, (min_dim-1)/2, Gfx.ARC_COUNTER_CLOCKWISE, 181 - 180*battery/100, 179);    
-			
-			// memory	
-			if (showMemory) {		       		
-				dc.setColor(mem_color, Gfx.COLOR_TRANSPARENT);    				
-				dc.drawArc(width/2-1, height/2-1, (min_dim-1)/2 - 6, Gfx.ARC_CLOCKWISE, 179*mem, 1);      
-			}			
-			
-			// steps
-			if (showSteps) {
-				dc.setColor(steps_color, Gfx.COLOR_TRANSPARENT);  
-				dc.drawArc(width/2-1, height/2-1,(min_dim-1)/2, Gfx.ARC_COUNTER_CLOCKWISE, 181, 181 + 178 * steps_norm);    			
-			}
+        if (showBatteryBar) {
+			var battery = Sys.getSystemStats().battery / 100;
+			drawBatteryBar(dc, battery);
 		}
 		
+		if (showStepsBar) {
+			var steps = min(Act.getInfo().steps * 1.0 / Act.getInfo().stepGoal, 1.0);
+			drawStepsBar(dc, steps);
+		}
+
+		if (showMemoryBar) {
+			var mem = Sys.getSystemStats().usedMemory * 1.0 / Sys.getSystemStats().totalMemory;
+			var mem_color = Gfx.COLOR_LT_GRAY;
+
+			if (mem > 0.85) {
+				mem_color = 0xff0000;
+			} 
+
+			if (screenShape == Sys.SCREEN_SHAPE_RECTANGLE) {				       		
+				dc.setColor(mem_color, Gfx.COLOR_TRANSPARENT);   
+				dc.fillRectangle(width * mem, 4, width, 3);  
+			} else {       		
+				dc.setColor(mem_color, Gfx.COLOR_TRANSPARENT);    				
+				dc.drawArc(width/2-1, height/2-1, (min_dim-1)/2 - 6, Gfx.ARC_CLOCKWISE, 179*mem, 1);      
+			}		
+		}	
 
         if(showSunrise){
+       
+	        var pos = Activity.getActivityInfo().currentLocation;
+			if (pos != null) {				
+				var newlonW = pos.toDegrees()[1].toFloat();
+				var newlatN = pos.toDegrees()[0].toFloat();			
+				if (lonW != newlonW) { 
+					hasNewLocation = true;
+					lonW = newlonW;
+					latN = newlatN;
+					var app = App.getApp();
+					app.setProperty("latN", latN);
+					app.setProperty("lonW", lonW);
+					System.println("compute sun - has new location");
+				}
+			} 
+			
 			var info = Calendar.info(Time.now(), Time.FORMAT_MEDIUM);
-			if(day != info.day || utcOffset != clockTime.timeZoneOffset ) {
+			if(day != info.day || utcOffset != clockTime.timeZoneOffset || hasNewLocation) {
 				clockTime = Sys.getClockTime();
-				utcOffset = clockTime.timeZoneOffset;
+				utcOffset = clockTime.timeZoneOffset;				
+				System.println("compute sun");
 				computeSun(dc);
+				hasNewLocation = false;
 			}
 			if (sunrise != null) {
 			
@@ -175,61 +162,63 @@ class ArcDeTriompheView extends Ui.WatchFace
         }
         
         if (showHRHistory) {
-			var hr_min = 0;
-			var hr_max = 0;
-			var hr = 0;
+			if ( Toybox has :SensorHistory ) {
+				var hr_min = 0;
+				var hr_max = 0;
+				var hr = 0;
 				if (Sensor != null) {
-				var hrhist = Sensor.getHeartRateHistory({ :order=>Sensor.ORDER_NEWEST_FIRST} );
-				if (hrhist != null) {
-					if (hrhist.getMin() != null) { 
-						hr_min = hrhist.getMin(); 
-					}
-					
-					if (hrhist.getMax() != null) { 
-						hr_max = hrhist.getMax(); 
-					}
-					dc.setPenWidth(1);
-					for (var i = 0; i <= width; i +=1) {
-						var hr_sample = hrhist.next();
-						if (hr_sample != null) {
-							hr = hr_sample.data;
-							if (hr != null) {
-								dc.setColor(0xff66666, Gfx.COLOR_TRANSPARENT); 
-								dc.drawLine(width - i, height - 10, width - i, (height - 10) - (hr - hr_min) *1.0 /(hr_max - hr_min) * 40);
+					var hrhist = Sensor.getHeartRateHistory({ :order=>Sensor.ORDER_NEWEST_FIRST} );
+					if (hrhist != null) {
+						if (hrhist.getMin() != null) { 
+							hr_min = hrhist.getMin(); 
+						}
+						
+						if (hrhist.getMax() != null) { 
+							hr_max = hrhist.getMax(); 
+						}
+						dc.setPenWidth(1);
+						for (var i = 0; i <= width; i +=1) {
+							var hr_sample = hrhist.next();
+							if (hr_sample != null) {
+								hr = hr_sample.data;
+								if (hr != null) {
+									dc.setColor(0xff66666, Gfx.COLOR_TRANSPARENT); 
+									dc.drawLine(width - i, height - 10, width - i, (height - 10) - (hr - hr_min) *1.0 /(hr_max - hr_min) * 40);
 
+								}
 							}
 						}
 					}
 				}
 			}
-			
-			if (showDate) {
-				var now = Time.now();
-				var info = Calendar.info(now, Time.FORMAT_LONG);     
-				var dateStr = Lang.format("$1$ $2$", [info.month, info.day]);			
-				dc.setColor(0xaaaaaa, Gfx.COLOR_TRANSPARENT);
-				dc.drawText(width / 2, 7, Gfx.FONT_TINY, dateStr, Gfx.TEXT_JUSTIFY_CENTER);
-			}
-			
-			if (showTime) {
-				var timeStr = (clockTime.hour).format("%02d") + ":" + (clockTime.min).format("%02d");
-				dc.drawText(width / 2, 20, Gfx.FONT_TINY, timeStr, Gfx.TEXT_JUSTIFY_CENTER);
-				dc.drawLine(width / 2 - 48, height / 2 + 7, width / 2 + 23, height / 2 + 7); 
-			}			
         }
-        
+
+		if (showDate) {
+			var now = Time.now();
+			var info = Calendar.info(now, Time.FORMAT_LONG);     
+			var dateStr = Lang.format("$1$ $2$", [info.month, info.day]);			
+			dc.setColor(0xaaaaaa, Gfx.COLOR_TRANSPARENT);
+			dc.drawText(width / 2, 7, Gfx.FONT_TINY, dateStr, Gfx.TEXT_JUSTIFY_CENTER);
+		}
+		
+		if (showTime) {
+			var timeStr = (clockTime.hour).format("%02d") + ":" + (clockTime.min).format("%02d");
+			dc.drawText(width / 2, 20, Gfx.FONT_TINY, timeStr, Gfx.TEXT_JUSTIFY_CENTER);
+			dc.drawLine(width / 2 - 48, height / 2 + 7, width / 2 + 23, height / 2 + 7); 
+		}	        
 
 		// draw the arcs for hours
         hourHand = ((((clockTime.hour % 12) * 60) + clockTime.min) / (12 * 60.0)) * Math.PI * 2;
         dc.setColor(0xc0c0c0, Gfx.COLOR_TRANSPARENT);
 		dc.setPenWidth(6);
-        if(clockTime.hour >= 12) {
-			dc.drawArc(width / 2, height / 2, 30, Gfx.ARC_CLOCKWISE, 90, ((12 - (clockTime.hour  % 12 + clockTime.min * 1.0/60) + 3) * 30) );
+		
+        if(clockTime.hour > 12) {
+			dc.drawArc(width / 2, height / 2, 30, Gfx.ARC_CLOCKWISE, 90, ((12 - (clockTime.hour  % 12 + clockTime.min /  60.0) + 3) * 30) );
 			dc.drawArc(width / 2, height / 2, 20, Gfx.ARC_CLOCKWISE, 90, 90 );
 			dc.setPenWidth(1);
 			drawHand(dc, hourHand, 26, 10, 3);
 		} else {
-			dc.drawArc(width / 2, height / 2, 20, Gfx.ARC_CLOCKWISE, 90, ((12 - (clockTime.hour  % 12 + clockTime.min * 1.0/60) + 3) * 30) );
+			dc.drawArc(width / 2, height / 2, 20, Gfx.ARC_CLOCKWISE, 90, ((12 - (clockTime.hour  % 12 + clockTime.min / 60.0) + 3) * 30) );
 			dc.setPenWidth(1);
 			drawHand(dc, hourHand, 15, 10, 3);
 		}
@@ -279,16 +268,6 @@ class ArcDeTriompheView extends Ui.WatchFace
 
     
 	function computeSun(dc) {
-        var pos = Activity.getActivityInfo().currentLocation;
-        if (null == pos){
-            return;
-        }
-        else {
-            // use absolute to get west as positive
-            lonW = pos.toDegrees()[1].toFloat();
-            latN = pos.toDegrees()[0].toFloat();
-        }
-
         // compute current date as day number from beg of year
         utcOffset = clockTime.timeZoneOffset;
         var timeInfo = Calendar.info(Time.now().add(new Time.Duration(utcOffset)), Calendar.FORMAT_SHORT);
