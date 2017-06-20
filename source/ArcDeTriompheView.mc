@@ -16,8 +16,8 @@ class ArcDeTriompheView extends Ui.WatchFace
     var isAwake;
     var showSunrise = true;
     var showSunriseTimes = false;
-    var showDate = false;
-    var showTime = false;
+    var showDate = true;
+    var showTime = true;
     var showBatteryBar = true;
     var showStepsBar = true;
     var showMemoryBar = true;    
@@ -40,10 +40,16 @@ class ArcDeTriompheView extends Ui.WatchFace
     
     function initialize() {
         WatchFace.initialize();
-		var app = App.getApp();
-		
+		var app = App.getApp();		
 		latN = app.getProperty("latN");
 		lonW = app.getProperty("lonW");
+        showTime = Application.getApp().getProperty("showTime");
+        showDate = Application.getApp().getProperty("showDate");
+        showBatteryBar = Application.getApp().getProperty("showBatteryBar");
+        showStepsBar = Application.getApp().getProperty("showStepsBar");
+        showMemoryBar = Application.getApp().getProperty("showMemoryBar");        
+        showSunrise = Application.getApp().getProperty("showSunrise"); 
+		showHRHistory = Application.getApp().getProperty("showHRHistory");
 		if (location != null) {
 			hasNewLocation = true;
 		}
@@ -70,6 +76,58 @@ class ArcDeTriompheView extends Ui.WatchFace
         // Clear the screen
         dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_WHITE);
         dc.fillRectangle(0, 0, dc.getWidth(), dc.getHeight());
+
+        if (showHRHistory) {
+			if ( Toybox has :SensorHistory ) {
+				var hr_min = 0;
+				var hr_max = 0;
+				var hr = 0;
+				if (Sensor != null) {
+					var hrhist = Sensor.getHeartRateHistory({ :order=>Sensor.ORDER_NEWEST_FIRST} );
+					var hr2 = Sensor.getHeartRateHistory({ :order=>Sensor.ORDER_NEWEST_FIRST} );
+					var histsize = 0;
+					while (hr2.next()) {
+						histsize += 1;
+					}
+													
+					if (hrhist != null) {
+						if (hrhist.getMin() != null) { 
+							hr_min = hrhist.getMin(); 
+						}
+						
+						if (hrhist.getMax() != null) { 
+							hr_max = hrhist.getMax(); 
+						}
+						dc.setPenWidth(1);
+						if (screenShape == Sys.SCREEN_SHAPE_RECTANGLE) {
+							for (var i = 0; i <= width; i +=1) {
+								var hr_sample = hrhist.next();
+								if (hr_sample != null) {
+									hr = hr_sample.data;
+									if (hr != null) {
+										dc.setColor(0xff5555, Gfx.COLOR_TRANSPARENT); 
+										dc.drawLine(width - i, height - 10, width - i, (height - 10) - (hr - hr_min) *1.0 /(hr_max - hr_min) * 40);
+									}
+								}
+							}
+						} else {					
+							for (var i = 0; i <= histsize; i +=1) {
+								var hr_sample = hrhist.next();
+								if (hr_sample != null) {
+									hr = hr_sample.data;
+									if (hr != null) {
+										dc.setColor(0xff5555, Gfx.COLOR_TRANSPARENT); 
+										dc.drawLine( (width /2 + histsize/2) - i, height, 
+											(width /2 + histsize/2) - i, (height - 10) - (hr - hr_min) *1.0 /(hr_max - hr_min) * 40);
+									}
+								}
+								
+							}						
+						}
+					}
+				}
+			}
+        }
         
 
         if (showBatteryBar) {
@@ -90,12 +148,13 @@ class ArcDeTriompheView extends Ui.WatchFace
 				mem_color = 0xff0000;
 			} 
 
+			dc.setPenWidth(2);
 			if (screenShape == Sys.SCREEN_SHAPE_RECTANGLE) {				       		
 				dc.setColor(mem_color, Gfx.COLOR_TRANSPARENT);   
 				dc.fillRectangle(width * mem, 4, width, 3);  
 			} else {       		
 				dc.setColor(mem_color, Gfx.COLOR_TRANSPARENT);    				
-				dc.drawArc(width/2-1, height/2-1, (min_dim-1)/2 - 6, Gfx.ARC_CLOCKWISE, 179*mem, 1);      
+				dc.drawArc(width/2-1, height/2-1, (min_dim)/2 - 7, Gfx.ARC_CLOCKWISE, 175*mem, 5);      
 			}		
 		}	
 
@@ -139,21 +198,27 @@ class ArcDeTriompheView extends Ui.WatchFace
 				if (tleft < 0) { tleft = 0; }
 				if (tleft > tdaylight) { tleft = tdaylight; }
 
+				dc.setPenWidth(2);
 				dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);       		       										
 				if (screenShape == Sys.SCREEN_SHAPE_RECTANGLE) {
 					dc.fillRectangle((tdaylight - tleft)/tdaylight*width, height-7, width, 3);		
 				}
 
 				if (screenShape != Sys.SCREEN_SHAPE_RECTANGLE) {
-					dc.drawArc(width/2, height/2, (min_dim-1)/2  - 6, Gfx.ARC_COUNTER_CLOCKWISE, 181, 359 - 180 * (tdaylight - tleft)/tdaylight);    
+					dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);  
+					dc.drawPoint(6, height/2);
+					dc.drawPoint(width-6, height/2);					
+					dc.drawArc(width/2, height/2, (min_dim)/2 - 6, 
+						Gfx.ARC_COUNTER_CLOCKWISE, 185, 355 - 170 * (tdaylight - tleft)/tdaylight);
 				}
 				
-				dc.setColor(0xff9d00, Gfx.COLOR_TRANSPARENT);
+				dc.setColor(0xffaa00, Gfx.COLOR_TRANSPARENT);
 				dc.setPenWidth(1);
 				hourHand = ((sunrise * 60) / (12 * 60.0)) * Math.PI * 2;
 				drawHand(dc, hourHand, 13, 38, 3);
 
-				dc.setColor(0xff9d00, Gfx.COLOR_TRANSPARENT);
+
+				dc.setColor(0xffaa00, Gfx.COLOR_TRANSPARENT);
 				dc.setPenWidth(1);
 				hourHand = ((sunset * 60) / (12 * 60.0)) * Math.PI * 2;
 				drawHand(dc, hourHand, 26, 25, 3);
@@ -161,37 +226,6 @@ class ArcDeTriompheView extends Ui.WatchFace
 			}
         }
         
-        if (showHRHistory) {
-			if ( Toybox has :SensorHistory ) {
-				var hr_min = 0;
-				var hr_max = 0;
-				var hr = 0;
-				if (Sensor != null) {
-					var hrhist = Sensor.getHeartRateHistory({ :order=>Sensor.ORDER_NEWEST_FIRST} );
-					if (hrhist != null) {
-						if (hrhist.getMin() != null) { 
-							hr_min = hrhist.getMin(); 
-						}
-						
-						if (hrhist.getMax() != null) { 
-							hr_max = hrhist.getMax(); 
-						}
-						dc.setPenWidth(1);
-						for (var i = 0; i <= width; i +=1) {
-							var hr_sample = hrhist.next();
-							if (hr_sample != null) {
-								hr = hr_sample.data;
-								if (hr != null) {
-									dc.setColor(0xff66666, Gfx.COLOR_TRANSPARENT); 
-									dc.drawLine(width - i, height - 10, width - i, (height - 10) - (hr - hr_min) *1.0 /(hr_max - hr_min) * 40);
-
-								}
-							}
-						}
-					}
-				}
-			}
-        }
 
 		if (showDate) {
 			var now = Time.now();
@@ -203,8 +237,11 @@ class ArcDeTriompheView extends Ui.WatchFace
 		
 		if (showTime) {
 			var timeStr = (clockTime.hour).format("%02d") + ":" + (clockTime.min).format("%02d");
-			dc.drawText(width / 2, 20, Gfx.FONT_TINY, timeStr, Gfx.TEXT_JUSTIFY_CENTER);
-			dc.drawLine(width / 2 - 48, height / 2 + 7, width / 2 + 23, height / 2 + 7); 
+			var vpos = 7;
+			if (showDate) {
+				vpos = 7 + dc.getFontHeight(Gfx.FONT_TINY) * 0.7;
+			} 
+			dc.drawText(width / 2, vpos , Gfx.FONT_TINY, timeStr, Gfx.TEXT_JUSTIFY_CENTER);
 		}	        
 
 		// draw the arcs for hours

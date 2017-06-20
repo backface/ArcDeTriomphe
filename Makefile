@@ -27,6 +27,12 @@ buildall:
 run: build
 	$(SDK_HOME)/bin/monkeydo bin/$(appName).prg $(DEVICE)
 
+runall: build
+	@for device in $(SUPPORTED_DEVICES_LIST); do \
+		echo "running on $$device"; \
+		$(SDK_HOME)/bin/monkeydo bin/$(appName).prg $$device; \
+	done
+
 deploy: build
 	@cp bin/$(appName).prg $(DEPLOY)
 

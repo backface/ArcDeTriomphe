@@ -7,14 +7,17 @@ function drawTopBar(dc, pos, color) {
 	var width = dc.getWidth();
     var height = dc.getHeight();  
     var min_dim = min(width,height);
-        
+    
+  	dc.setPenWidth(2);
 	if (screenShape == Sys.SCREEN_SHAPE_RECTANGLE) {				
 		dc.setColor(color, Gfx.COLOR_TRANSPARENT);  
 		dc.fillRectangle(0, 0, width * pos, 3); 
-	
 	} else {	
-		dc.setColor(color, Gfx.COLOR_TRANSPARENT);  
-		dc.drawArc(width/2, height/2, (min_dim-1)/2, Gfx.ARC_COUNTER_CLOCKWISE, 182 - 180 * pos, 178); 
+		dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);  
+		dc.drawPoint(width/2-min_dim/2+2, height/2);
+		dc.drawPoint(width/2+min_dim/2-2, height/2);		
+		dc.setColor(color, Gfx.COLOR_TRANSPARENT);   
+		dc.drawArc(width/2, height/2, (min_dim/2)-2, Gfx.ARC_COUNTER_CLOCKWISE, 185 - 180 * pos, 175); 	
 	}
 }
 
@@ -25,24 +28,29 @@ function drawBottomBar(dc, pos, color) {
     
     pos = min(pos,1.0);
     
+	dc.setPenWidth(2);
+
 	if (screenShape == Sys.SCREEN_SHAPE_RECTANGLE) {				
 		dc.setColor(color, Gfx.COLOR_TRANSPARENT);  
 		dc.fillRectangle(0, height-3, width * pos, 3); 
 	} else {
+		dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);  
+		dc.drawPoint(width/2-min_dim/2+2, height/2);
+		dc.drawPoint(width/2+min_dim/2-2, height/2);	
 		dc.setColor(color, Gfx.COLOR_TRANSPARENT);  
-		dc.drawPoint(0, height/2);
-		dc.drawPoint(width-1, height/2);
-		dc.drawArc(width/2-1, height/2-1, (min_dim-1)/2, Gfx.ARC_CLOCKWISE, - 178 * pos,  183 );    			
+		dc.drawArc(width/2, height/2, (min_dim/2)-2, Gfx.ARC_CLOCKWISE, 355, 185); 
+		dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_TRANSPARENT);  
+		dc.drawArc(width/2, height/2, (min_dim/2)-2, Gfx.ARC_CLOCKWISE, 355, -175- pos*-170); 
 	}
 }
 
 function drawBatteryBar(dc, battery) {
 	var color = Gfx.COLOR_LT_GRAY;
 
-	if (battery < 15) {
+	if (battery < 0.15) {
 		color = 0xFF0000;
-	} else if (battery <= 30) {
-		color = 0xFF3300;
+	} else if (battery <= 0.30) {
+		color = 0xFF5500;
 	} 
 	
 	drawTopBar(dc, battery, color);
