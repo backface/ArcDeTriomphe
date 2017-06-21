@@ -16,8 +16,8 @@ class ArcDeTriompheView extends Ui.WatchFace
     var isAwake;
     var showSunrise = true;
     var showSunriseTimes = false;
-    var showDate = true;
-    var showTime = true;
+    var showDate = false;
+    var showTime = false;
     var showBatteryBar = true;
     var showStepsBar = true;
     var showMemoryBar = true;    
@@ -33,10 +33,9 @@ class ArcDeTriompheView extends Ui.WatchFace
     var clockTime;
     var day = -1;
     var location;
-    var lonW;
-	var latN;
-	var hasNewLocation = false;
-    
+    var lonW = 0;
+	var latN = 0;
+	var hasNewLocation = false;  
     
     function initialize() {
         WatchFace.initialize();
@@ -62,16 +61,10 @@ class ArcDeTriompheView extends Ui.WatchFace
     function onUpdate(dc) {
         clockTime = Sys.getClockTime();
 
-        var hourHand;
-        var minuteHand;
-        var secondHand;
-        
-        
 		var width = dc.getWidth();
         var height = dc.getHeight();
         var min_dim = min(width,height);
         var max_dim = max(width,height);
-
 
         // Clear the screen
         dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_WHITE);
@@ -153,6 +146,9 @@ class ArcDeTriompheView extends Ui.WatchFace
 				dc.setColor(mem_color, Gfx.COLOR_TRANSPARENT);   
 				dc.fillRectangle(width * mem, 4, width, 3);  
 			} else {       		
+				dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);   
+				dc.drawPoint(width/2-min_dim/2+6, height/2);
+				dc.drawPoint(width/2+min_dim/2-6, height/2);			
 				dc.setColor(mem_color, Gfx.COLOR_TRANSPARENT);    				
 				dc.drawArc(width/2-1, height/2-1, (min_dim)/2 - 7, Gfx.ARC_CLOCKWISE, 175*mem, 5);      
 			}		
@@ -179,8 +175,10 @@ class ArcDeTriompheView extends Ui.WatchFace
 			if(day != info.day || utcOffset != clockTime.timeZoneOffset || hasNewLocation) {
 				clockTime = Sys.getClockTime();
 				utcOffset = clockTime.timeZoneOffset;				
-				System.println("compute sun");
-				computeSun(dc);
+				if (latN != null && lonW != null) {
+					System.println("compute sun");
+					computeSun(dc);
+				}
 				hasNewLocation = false;
 			}
 			if (sunrise != null) {
@@ -206,23 +204,27 @@ class ArcDeTriompheView extends Ui.WatchFace
 
 				if (screenShape != Sys.SCREEN_SHAPE_RECTANGLE) {
 					dc.setColor(Gfx.COLOR_LT_GRAY, Gfx.COLOR_TRANSPARENT);  
-					dc.drawPoint(6, height/2);
-					dc.drawPoint(width-6, height/2);					
+					dc.drawPoint(width/2-min_dim/2+6, height/2);
+					dc.drawPoint(width/2+min_dim/2-6, height/2);
 					dc.drawArc(width/2, height/2, (min_dim)/2 - 6, 
 						Gfx.ARC_COUNTER_CLOCKWISE, 185, 355 - 170 * (tdaylight - tleft)/tdaylight);
 				}
 				
+				dc.setPenWidth(2);
 				dc.setColor(0xffaa00, Gfx.COLOR_TRANSPARENT);
-				dc.setPenWidth(1);
-				hourHand = ((sunrise * 60) / (12 * 60.0)) * Math.PI * 2;
-				drawHand(dc, hourHand, 13, 38, 3);
-
-
-				dc.setColor(0xffaa00, Gfx.COLOR_TRANSPARENT);
-				dc.setPenWidth(1);
-				hourHand = ((sunset * 60) / (12 * 60.0)) * Math.PI * 2;
-				drawHand(dc, hourHand, 26, 25, 3);
-								
+				
+				var hsr = ((sunrise) * 30 - 90) * Math.PI / 180;
+				dc.drawLine( 
+					(width / 2) + 13 * Math.cos(hsr), (height / 2) + 13 * Math.sin(hsr),
+					(width / 2) + 51 * Math.cos(hsr), (height / 2) + 51 * Math.sin(hsr)
+				);		
+				
+				var hst = ((sunset) * 30 - 90) * Math.PI / 180;
+				dc.drawLine( 
+					(width / 2) + 26 * Math.cos(hst), (height / 2) + 26 * Math.sin(hst),
+					(width / 2) + 51 * Math.cos(hst), (height / 2) + 51 * Math.sin(hst)
+				);					
+												
 			}
         }
         
@@ -245,31 +247,38 @@ class ArcDeTriompheView extends Ui.WatchFace
 		}	        
 
 		// draw the arcs for hours
-        hourHand = ((((clockTime.hour % 12) * 60) + clockTime.min) / (12 * 60.0)) * Math.PI * 2;
+		var h = (((clockTime.hour % 12) * 30) + clockTime.min/2 - 90) * Math.PI / 180;
         dc.setColor(0xc0c0c0, Gfx.COLOR_TRANSPARENT);
-		dc.setPenWidth(6);
-		
+		dc.setPenWidth(6);		
         if(clockTime.hour > 12) {
 			dc.drawArc(width / 2, height / 2, 30, Gfx.ARC_CLOCKWISE, 90, ((12 - (clockTime.hour  % 12 + clockTime.min /  60.0) + 3) * 30) );
 			dc.drawArc(width / 2, height / 2, 20, Gfx.ARC_CLOCKWISE, 90, 90 );
-			dc.setPenWidth(1);
-			drawHand(dc, hourHand, 26, 10, 3);
+			dc.setPenWidth(3);
+			dc.drawLine( 
+				(width / 2) + 26 * Math.cos(h), (height / 2) + 26 * Math.sin(h),
+				(width / 2) + 36 * Math.cos(h), (height / 2) + 36 * Math.sin(h)
+			);			
 		} else {
 			dc.drawArc(width / 2, height / 2, 20, Gfx.ARC_CLOCKWISE, 90, ((12 - (clockTime.hour  % 12 + clockTime.min / 60.0) + 3) * 30) );
-			dc.setPenWidth(1);
-			drawHand(dc, hourHand, 15, 10, 3);
+			dc.setPenWidth(2);
+			dc.drawLine( 
+				(width / 2) + 15 * Math.cos(h), (height / 2) + 15 * Math.sin(h),
+				(width / 2) + 25 * Math.cos(h), (height / 2) + 25 * Math.sin(h)
+			);				
 		}
         
         //draw arcs for minutes
         dc.setColor(0xd0d0d0, Gfx.COLOR_TRANSPARENT);
         dc.setPenWidth(3);
-        dc.drawArc(width / 2, height / 2, 40 , Gfx.ARC_CLOCKWISE, 90, ((60 - clockTime.min + 15 ) * 6) );
-        dc.setPenWidth(1);        
+        dc.drawArc(width / 2, height / 2, 40 , Gfx.ARC_CLOCKWISE, 90, ((60 - clockTime.min + 15 ) * 6) );        
 
-        // Draw the minute hand
-        minuteHand = (clockTime.min / 60.0) * Math.PI * 2;
-        drawHand(dc, minuteHand, 35, 10, 2);
-       
+        // Draw the minute hand   		
+   		var m = ((clockTime.min * 6) - 90) * Math.PI / 180;  
+		dc.setPenWidth(2);        
+		dc.drawLine( 
+			(width / 2) + 35 * Math.cos(m), (height / 2) + 35 * Math.sin(m),
+			(width / 2) + 45 * Math.cos(m), (height / 2) + 45 * Math.sin(m)
+		);	               
     }
 
 	function onEnterSleep() {
@@ -280,30 +289,7 @@ class ArcDeTriompheView extends Ui.WatchFace
     function onExitSleep() {
         isAwake = true;
     }    
-
-	// Draw the watch hand
-    function drawHand(dc, angle, offset, length, width) {
-        // Map out the coordinates of the watch hand
-        var coords = [[-(width / 2), -offset], [-(width / 2), -offset-length], [width / 2, -offset-length], [width / 2, -offset]];
-        var result = new [4];
-        var centerX = dc.getWidth() / 2;
-        var centerY = dc.getHeight() / 2;
-        var cos = Math.cos(angle);
-        var sin = Math.sin(angle);
-
-        // Transform the coordinates
-        for (var i = 0; i < 4; i += 1) {
-            var x = (coords[i][0] * cos) - (coords[i][1] * sin);
-            var y = (coords[i][0] * sin) + (coords[i][1] * cos);
-            result[i] = [centerX + x, centerY + y];
-        }
-
-        // Draw the polygon
-        dc.fillPolygon(result);
-        dc.fillPolygon(result);
-    }
-
-    
+   
 	function computeSun(dc) {
         // compute current date as day number from beg of year
         utcOffset = clockTime.timeZoneOffset;

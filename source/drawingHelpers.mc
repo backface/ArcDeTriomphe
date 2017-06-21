@@ -38,9 +38,12 @@ function drawBottomBar(dc, pos, color) {
 		dc.drawPoint(width/2-min_dim/2+2, height/2);
 		dc.drawPoint(width/2+min_dim/2-2, height/2);	
 		dc.setColor(color, Gfx.COLOR_TRANSPARENT);  
-		dc.drawArc(width/2, height/2, (min_dim/2)-2, Gfx.ARC_CLOCKWISE, 355, 185); 
-		dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_TRANSPARENT);  
-		dc.drawArc(width/2, height/2, (min_dim/2)-2, Gfx.ARC_CLOCKWISE, 355, -175- pos*-170); 
+		dc.drawArc(width/2, height/2, (min_dim/2)-2, Gfx.ARC_CLOCKWISE, -5, -175); 
+		
+		if (pos < 0.99) {
+			dc.setColor(Gfx.COLOR_BLACK, Gfx.COLOR_TRANSPARENT);  
+			dc.drawArc(width/2, height/2, (min_dim/2)-2, Gfx.ARC_CLOCKWISE, 355, -180 - pos*-170); 
+		}
 	}
 }
 
